@@ -23,20 +23,21 @@ ask_dictionary = parse_json_to_dict("./questions_tree.json")
 def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict):
     keyboard = types.InlineKeyboardMarkup(row_width=3)
     for key, value in questions_tree.items():
+        pointer_key = key + "-" + repr(id(value))
         if isinstance(value, dict):
-            node_keyboard = generate_questions_tree_keyboard(value, parent_chain + [key], answers_dict)
-            next_node_button = types.InlineKeyboardButton(text=key, callback_data=key)
+            node_keyboard = generate_questions_tree_keyboard(value, parent_chain + [pointer_key], answers_dict)
+            next_node_button = types.InlineKeyboardButton(text=key, callback_data=pointer_key)
 
-            answers_dict[key] = node_keyboard
+            answers_dict[pointer_key] = node_keyboard
             keyboard.add(next_node_button)
         elif isinstance(value, str):
             end_keyboard = types.InlineKeyboardMarkup(row_width=1)
             start_button = types.InlineKeyboardButton(text="В начало", callback_data="0")
             back_button = types.InlineKeyboardButton(text="Назад", callback_data=parent_chain[-2])
             end_keyboard.add(start_button, back_button)
-            answer_button = types.InlineKeyboardButton(text=key, callback_data=key)
+            answer_button = types.InlineKeyboardButton(text=key, callback_data=pointer_key)
 
-            answers_dict[key] = (value, end_keyboard)
+            answers_dict[pointer_key] = (value, end_keyboard)
             keyboard.add(answer_button)
         else:
             raise Exception("Ошибка: не удалось прочитать древо вопросов (встречен неправильный тип данных)")
