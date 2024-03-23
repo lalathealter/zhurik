@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from telebot import types
 import telebot
 import json
+import sqlite3
+from db_init import questions_table_name
 
 load_dotenv()
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
@@ -17,13 +19,13 @@ def parse_json_to_dict(filename):
 
 
 ask_dictionary = parse_json_to_dict("./questions_tree.json")
-
+db_conn = sqlite3.connect('zhurik.db')
 
 
 def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict):
     keyboard = types.InlineKeyboardMarkup(row_width=3)
     for key, value in questions_tree.items():
-        pointer_key = key + "-" + repr(id(value))
+        pointer_key = make_pointer_key(key, value)
         if isinstance(value, dict):
             node_keyboard = generate_questions_tree_keyboard(value, parent_chain + [pointer_key], answers_dict)
             next_node_button = types.InlineKeyboardButton(text=key, callback_data=pointer_key)
@@ -39,6 +41,7 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
 
             answers_dict[pointer_key] = (value, end_keyboard)
             keyboard.add(answer_button)
+            save_question_to_db(key, parent_chain[-1])
         else:
             raise Exception("Ошибка: не удалось прочитать древо вопросов (встречен неправильный тип данных)")
 
@@ -46,6 +49,31 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
         go_to_previous_node_button = types.InlineKeyboardButton(text="Назад", callback_data=parent_chain[-2])
         keyboard.add(go_to_previous_node_button)
     return keyboard
+
+def make_pointer_key(key, value):
+    return key + "-" + repr(id(value))
+
+def take_value_from_pointer_key(pointer_key):
+    return pointer_key.split("-")[1]
+
+
+def save_question_to_db(question, parent, db_connection):
+    with db_connection.cursor() as curs:
+        search_statement = f"""
+            SELECT id FROM {questions_table_name}
+            WHERE prompt = ? AND parent_prompt = ?
+        """
+        curs.execute(search_statement, question, parent)
+        data = curs.fetchall()
+        if len(data) == 0:
+            return
+
+        insert_statement = f"""
+            INSERT INTO {questions_table_name} (prompt, parent_prompt)
+            VALUES (?, ?)
+        """
+        curs.execute(insert_statement, question, parent)
+    db_connection.commit()
 
 
 answers_dict = {}
