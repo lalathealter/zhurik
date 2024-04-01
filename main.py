@@ -35,13 +35,13 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
         elif isinstance(value, str):
             end_keyboard = types.InlineKeyboardMarkup(row_width=1)
             start_button = types.InlineKeyboardButton(text="В начало", callback_data="0")
-            back_button = types.InlineKeyboardButton(text="Назад", callback_data=parent_chain[-2])
+            back_button = types.InlineKeyboardButton(text="Назад", callback_data=parent_chain[-1])
             end_keyboard.add(start_button, back_button)
             answer_button = types.InlineKeyboardButton(text=key, callback_data=pointer_key)
 
             answers_dict[pointer_key] = (value, end_keyboard)
             keyboard.add(answer_button)
-            save_question_to_db(key, parent_chain[-1])
+            save_question_to_db(key, parent_chain[-1], db_conn)
         else:
             raise Exception("Ошибка: не удалось прочитать древо вопросов (встречен неправильный тип данных)")
 
@@ -58,21 +58,21 @@ def take_value_from_pointer_key(pointer_key):
 
 
 def save_question_to_db(question, parent, db_connection):
-    with db_connection.cursor() as curs:
-        search_statement = f"""
-            SELECT id FROM {questions_table_name}
-            WHERE prompt = ? AND parent_prompt = ?
-        """
-        curs.execute(search_statement, question, parent)
-        data = curs.fetchall()
-        if len(data) == 0:
-            return
+    curs = db_connection.cursor()
+    search_statement = f"""
+        SELECT id FROM {questions_table_name}
+        WHERE prompt = ? AND parent_prompt = ?
+    """
+    curs.execute(search_statement, [question, parent])
+    data = curs.fetchall()
+    if len(data) == 0:
+        return
 
-        insert_statement = f"""
-            INSERT INTO {questions_table_name} (prompt, parent_prompt)
-            VALUES (?, ?)
-        """
-        curs.execute(insert_statement, question, parent)
+    insert_statement = f"""
+        INSERT INTO {questions_table_name} (prompt, parent_prompt)
+        VALUES (?, ?)
+    """
+    curs.execute(insert_statement, [question, parent])
     db_connection.commit()
 
 
