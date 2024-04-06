@@ -13,13 +13,51 @@ bot = telebot.TeleBot(TG_BOT_TOKEN)
 
 
 def parse_json_to_dict(filename):
-    with open(filename) as file:
+    with open(filename, encoding="utf-8") as file:
         jsonObj = json.load(file)
         return jsonObj
 
 
+operators_dict = parse_json_to_dict("./operators.json")
 ask_dictionary = parse_json_to_dict("./questions_tree.json")
 db_conn = sqlite3.connect('zhurik.db')
+
+
+def form_invite_to_operator_button(name, tag):
+    keyboard = types.InlineKeyboardMarkup()
+    operator_text = f"{name}"
+    operator_url = f"t.me/{tag}"
+    invite_button = types.InlineKeyboardButton(operator_text, operator_url)
+    keyboard.add(invite_button)
+    return keyboard
+
+
+def generate_operators_pool(operators_dict):
+    operators_pool = []
+    for name, tag in operators_dict.items():
+        key = form_invite_to_operator_button(name, tag)
+        operators_pool.append(key)
+    return operators_pool
+
+
+def bind_invites_to_operators_dict(operators_dict):
+    operators_pool = generate_operators_pool(operators_dict)
+
+    def operator_generator():
+        while True:
+            for operator_invite_key in operators_pool:
+                yield operator_invite_key
+
+    generator = operator_generator()
+
+    def get_next_operator():
+        return next(generator)
+
+    return get_next_operator
+
+
+get_next_operator = bind_invites_to_operators_dict(operators_dict)
+
 
 
 def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict):
@@ -50,8 +88,10 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
         keyboard.add(go_to_previous_node_button)
     return keyboard
 
+
 def make_pointer_key(key, value):
     return key + "-" + repr(id(value))
+
 
 def take_value_from_pointer_key(pointer_key):
     return pointer_key.split("-")[1]
@@ -72,7 +112,7 @@ def save_question_to_db(question, parent, db_connection):
         INSERT INTO {questions_table_name} (prompt, parent_prompt)
         VALUES (?, ?)
     """
-    curs.execute(insert_statement, [question, parent])
+    curs.execute(insert_statement, [])
     db_connection.commit()
 
 
@@ -93,6 +133,17 @@ def send_welcome_message(bot, message):
         "Привет! Спроси меня о чём угодно", 
         reply_markup=chat_bot_start_point
     )
+
+
+@bot.message_handler(commands=['help'])
+def help_msg(message):
+    send_invite_to_operator_message(bot, message)
+
+def send_invite_to_operator_message(bot, message):
+    invite_text = "Если ваши вопросы остались без ответа, то вы можете обратиться за помощью к нашему оператору:"
+    invite_key = get_next_operator()
+    bot.send_message(message.chat.id, invite_text, reply_markup=invite_key)
+
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
