@@ -19,6 +19,7 @@ questions_table = f"""CREATE TABLE IF NOT EXISTS {questions_table_name} (
 table_names = [users_table_name, questions_table_name]
 tables = [users_table, questions_table]
 
+
 def main():
     connection = sqlite3.connect('zhurik.db')
     cursor = connection.cursor()
@@ -28,6 +29,7 @@ def main():
 
     print("База данных успешно создана. Благодарение Богу!")
     connection.close()
+
 
 if __name__ == "__main__":
     main()
