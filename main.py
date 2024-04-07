@@ -19,7 +19,6 @@ def parse_json_to_dict(filename):
 
 operators_dict = parse_json_to_dict("./operators.json")
 ask_dictionary = parse_json_to_dict("./questions_tree.json")
-db_conn = db_connect()
 
 
 def form_invite_to_operator_button(name, tag):
@@ -93,7 +92,8 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
 
             answers_dict[pointer_key] = (value, end_keyboard)
             keyboard.add(answer_button)
-            save_question_to_db(key, parent_chain[-1], db_conn)
+            parent_prompt = take_keyname_from_pointer_key(parent_chain[-1])
+            save_question_to_db(key, parent_prompt)
         else:
             raise Exception("Ошибка: не удалось прочитать древо вопросов (встречен неправильный тип данных)")
 
@@ -118,15 +118,16 @@ def take_keyname_from_pointer_key(pointer_key):
     return pointer_key.split("-")[0]
 
 
-def save_question_to_db(question, parent, db_connection):
-    curs = db_connection.cursor()
+def save_question_to_db(question, parent):
+    connection = db_connect()
+    curs = connection.cursor()
     search_statement = f"""
         SELECT id FROM {questions_table_name}
         WHERE prompt = ? AND parent_prompt = ?
     """
     curs.execute(search_statement, [question, parent])
     data = curs.fetchall()
-    if len(data) == 0:
+    if len(data) != 0:
         return
 
     insert_statement = f"""
@@ -134,7 +135,22 @@ def save_question_to_db(question, parent, db_connection):
         VALUES (?, ?)
     """
     curs.execute(insert_statement, [question, parent])
-    db_connection.commit()
+    connection.commit()
+    connection.close()
+
+
+def update_question_usage(question, parent):
+    connection = db_connect()
+    curs = connection.cursor()
+    search_statement = f"""
+        UPDATE {questions_table_name}
+        SET ask_count = ask_count + 1
+        WHERE prompt = ? AND parent_prompt = ?
+    """
+
+    curs.execute(search_statement, [question, parent])
+    connection.commit()
+    connection.close()
 
 
 answers_dict = {}
@@ -186,7 +202,8 @@ def callback_inline(call):
     global answers_dict
     answer_data = answers_dict[sign_id]
 
-    theme_text = take_keyname_from_pointer_key(sign_id)
+    prev_prompt = take_keyname_from_pointer_key(sign_id)
+    theme_text = prev_prompt
     if theme_text == "0":
         theme_text = get_chat_bot_start_text()
     theme_text += ":"
@@ -195,12 +212,19 @@ def callback_inline(call):
         answer_text = answer_data[0]
         answer_message = f"{theme_text} {answer_text}"
         keyboard = answer_data[1]
+
+        parent_prompt = call.message.text
+        if parent_prompt[-1] == ":":
+            parent_prompt = parent_prompt[:-1]
+        update_question_usage(prev_prompt, parent_prompt)
+
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             text=answer_message,
             message_id=call.message.message_id,
             reply_markup=None
         )
+
         bot.send_message(
             chat_id=call.message.chat.id,
             text="Что-нибудь ещё?",
