@@ -39,6 +39,7 @@ def main():
     for table_statement in table_statements:
         cursor.execute(table_statement)
 
+    connection.commit()
     print("База данных успешно создана. Благодарение Богу!")
     connection.close()
 
