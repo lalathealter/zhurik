@@ -1,9 +1,8 @@
-import sqlite3
-from db_init import table_names
+from db_init import table_names, db_connect
 
 
 def main():
-    connection = sqlite3.connect('zhurik.db')
+    connection = db_connect()
     cursor = connection.cursor()
 
     for table_name in table_names:

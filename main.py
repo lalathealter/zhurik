@@ -3,8 +3,7 @@ from dotenv import load_dotenv
 from telebot import types
 import telebot
 import json
-import sqlite3
-from db_init import questions_table_name
+from db_init import questions_table_name, db_connect
 
 load_dotenv()
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
@@ -20,7 +19,7 @@ def parse_json_to_dict(filename):
 
 operators_dict = parse_json_to_dict("./operators.json")
 ask_dictionary = parse_json_to_dict("./questions_tree.json")
-db_conn = sqlite3.connect('zhurik.db')
+db_conn = db_connect()
 
 
 def form_invite_to_operator_button(name, tag):
@@ -134,7 +133,7 @@ def save_question_to_db(question, parent, db_connection):
         INSERT INTO {questions_table_name} (prompt, parent_prompt)
         VALUES (?, ?)
     """
-    curs.execute(insert_statement, [])
+    curs.execute(insert_statement, [question, parent])
     db_connection.commit()
 
 

@@ -1,4 +1,16 @@
+import os
+from dotenv import load_dotenv
 import sqlite3
+
+load_dotenv()
+DB_ADDRESS = os.getenv("DB_ADDRESS")
+if DB_ADDRESS is None:
+    DB_ADDRESS = "zhurik.db"
+
+
+def db_connect():
+    return sqlite3.connect(DB_ADDRESS)
+
 
 users_table_name = "users"
 users_table_setting = f""" CREATE TABLE IF NOT EXISTS {users_table_name} (
@@ -21,7 +33,7 @@ table_statements = [users_table_setting, questions_table_setting]
 
 
 def main():
-    connection = sqlite3.connect('zhurik.db')
+    connection = db_connect()
     cursor = connection.cursor()
 
     for table_statement in table_statements:
