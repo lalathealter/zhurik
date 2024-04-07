@@ -59,23 +59,38 @@ def bind_invites_to_operators_dict(operators_dict):
 get_next_operator = bind_invites_to_operators_dict(operators_dict)
 
 
-
 def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict):
     keyboard = types.InlineKeyboardMarkup(row_width=3)
     for key, value in questions_tree.items():
         pointer_key = make_pointer_key(key, value)
         if isinstance(value, dict):
-            node_keyboard = generate_questions_tree_keyboard(value, parent_chain + [pointer_key], answers_dict)
-            next_node_button = types.InlineKeyboardButton(text=key, callback_data=pointer_key)
+            node_keyboard = generate_questions_tree_keyboard(
+                value,
+                parent_chain + [pointer_key],
+                answers_dict
+            )
+            next_node_button = types.InlineKeyboardButton(
+                text=key,
+                callback_data=pointer_key
+            )
 
             answers_dict[pointer_key] = node_keyboard
             keyboard.add(next_node_button)
         elif isinstance(value, str):
             end_keyboard = types.InlineKeyboardMarkup(row_width=1)
-            start_button = types.InlineKeyboardButton(text="В начало", callback_data="0")
-            back_button = types.InlineKeyboardButton(text="Назад", callback_data=parent_chain[-1])
+            start_button = types.InlineKeyboardButton(
+                text="В начало",
+                callback_data="0"
+            )
+            back_button = types.InlineKeyboardButton(
+                text="Назад",
+                callback_data=parent_chain[-1]
+            )
             end_keyboard.add(start_button, back_button)
-            answer_button = types.InlineKeyboardButton(text=key, callback_data=pointer_key)
+            answer_button = types.InlineKeyboardButton(
+                text=key,
+                callback_data=pointer_key
+            )
 
             answers_dict[pointer_key] = (value, end_keyboard)
             keyboard.add(answer_button)
@@ -84,7 +99,10 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
             raise Exception("Ошибка: не удалось прочитать древо вопросов (встречен неправильный тип данных)")
 
     if len(parent_chain) > 1:
-        go_to_previous_node_button = types.InlineKeyboardButton(text="Назад", callback_data=parent_chain[-2])
+        go_to_previous_node_button = types.InlineKeyboardButton(
+            text="Назад",
+            callback_data=parent_chain[-2]
+        )
         keyboard.add(go_to_previous_node_button)
     return keyboard
 
@@ -117,7 +135,11 @@ def save_question_to_db(question, parent, db_connection):
 
 
 answers_dict = {}
-chat_bot_start_point = generate_questions_tree_keyboard(ask_dictionary, ["0"], answers_dict)
+chat_bot_start_point = generate_questions_tree_keyboard(
+    ask_dictionary,
+    ["0"],
+    answers_dict
+)
 answers_dict["0"] = chat_bot_start_point
 print(answers_dict)
 
@@ -127,10 +149,11 @@ def any_msg(message):
     global chat_bot_start_point
     send_welcome_message(bot, message)
 
+
 def send_welcome_message(bot, message):
     bot.send_message(
         message.chat.id,
-        "Привет! Спроси меня о чём угодно", 
+        "Привет! Спроси меня о чём угодно",
         reply_markup=chat_bot_start_point
     )
 
@@ -138,6 +161,7 @@ def send_welcome_message(bot, message):
 @bot.message_handler(commands=['help'])
 def help_msg(message):
     send_invite_to_operator_message(bot, message)
+
 
 def send_invite_to_operator_message(bot, message):
     invite_text = "Если ваши вопросы остались без ответа, то вы можете обратиться за помощью к нашему оператору:"
@@ -166,6 +190,7 @@ def callback_inline(call):
             message_id=call.message.message_id,
             reply_markup=answer
         )
+
 
 print("Бот запущен! Слава Богу!")
 bot.infinity_polling()
