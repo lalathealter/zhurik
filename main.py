@@ -115,6 +115,10 @@ def take_value_from_pointer_key(pointer_key):
     return pointer_key.split("-")[1]
 
 
+def take_keyname_from_pointer_key(pointer_key):
+    return pointer_key.split("-")[0]
+
+
 def save_question_to_db(question, parent, db_connection):
     curs = db_connection.cursor()
     search_statement = f"""
@@ -153,9 +157,17 @@ def any_msg(message):
 def send_welcome_message(bot, message):
     bot.send_message(
         message.chat.id,
-        "Привет! Спроси меня о чём угодно",
+        "Привет!"
+    )
+    bot.send_message(
+        message.chat.id,
+        get_chat_bot_start_text(),
         reply_markup=chat_bot_start_point
     )
+
+
+def get_chat_bot_start_text():
+    return "Спроси меня о чём угодно:"
 
 
 @bot.message_handler(commands=['help'])
@@ -173,22 +185,35 @@ def send_invite_to_operator_message(bot, message):
 def callback_inline(call):
     sign_id = call.data
     global answers_dict
-    answer = answers_dict[sign_id]
-    if isinstance(answer, tuple):
-        msg = answer[0]
-        keyboard = answer[1]
+    answer_data = answers_dict[sign_id]
+
+    theme_text = take_keyname_from_pointer_key(sign_id)
+    if theme_text == "0":
+        theme_text = get_chat_bot_start_text()
+    theme_text += ":"
+
+    if isinstance(answer_data, tuple):
+        answer_text = answer_data[0]
+        answer_message = f"{theme_text} {answer_text}"
+        keyboard = answer_data[1]
         bot.edit_message_text(
             chat_id=call.message.chat.id,
-            text=msg,
+            text=answer_message,
             message_id=call.message.message_id,
+            reply_markup=None
+        )
+        bot.send_message(
+            chat_id=call.message.chat.id,
+            text="Что-нибудь ещё?",
             reply_markup=keyboard
         )
     else:
+        keyboard = answer_data
         bot.edit_message_text(
             chat_id=call.message.chat.id,
-            text=call.message.text,
+            text=theme_text,
             message_id=call.message.message_id,
-            reply_markup=answer
+            reply_markup=keyboard
         )
 
 
