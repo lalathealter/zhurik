@@ -60,7 +60,7 @@ get_next_operator = bind_invites_to_operators_dict(operators_dict)
 def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict):
     keyboard = types.InlineKeyboardMarkup(row_width=3)
     for key, value in questions_tree.items():
-        pointer_key = make_pointer_key(key, value)
+        pointer_key = make_pointer_key(key, value, parent_chain[-1])
         if isinstance(value, dict):
             node_keyboard = generate_questions_tree_keyboard(
                 value,
@@ -92,7 +92,7 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
 
             answers_dict[pointer_key] = (value, end_keyboard)
             keyboard.add(answer_button)
-            save_question_to_db(key, parent_chain[-1])
+            save_question_to_db(pointer_key, parent_chain[-1])
         else:
             raise Exception("Ошибка: не удалось прочитать древо вопросов (встречен неправильный тип данных)")
 
@@ -105,11 +105,7 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
     return keyboard
 
 
-questions_for_pointer_keys = {}
-sql_names_for_pointer_keys = {}
-
-
-def make_pointer_key(key, value):
+def make_pointer_key(key, value, parent_key):
     pointer_key = repr(id(key)) + "-" + repr(id(value))
     ind = 0
     indexed_question = key + "-" + str(ind)
@@ -121,11 +117,15 @@ def make_pointer_key(key, value):
         continue_generate = bool(value_already_there)
 
     sql_names_for_pointer_keys[pointer_key] = indexed_question
+    if parent_key is not None:
+        parents_for_pointer_key[pointer_key] = parent_key
     questions_for_pointer_keys[pointer_key] = key
     return pointer_key
 
 
 def take_question_from_pointer_key(pointer_key):
+    if pointer_key == "0":
+        return get_chat_bot_start_text()
     if pointer_key in questions_for_pointer_keys:
         prompt = questions_for_pointer_keys[pointer_key]
 
@@ -134,17 +134,32 @@ def take_question_from_pointer_key(pointer_key):
         raise Exception("Запрошен несуществующий ключ вопроса")
 
 
-def take_keyname_from_pointer_key(pointer_key):
-    return pointer_key
+def take_sql_name_from_pointer_key(pointer_key):
+    if pointer_key in sql_names_for_pointer_keys:
+        sql_name = sql_names_for_pointer_keys[pointer_key]
+        return sql_name
+    else:
+        raise Exception("Запрошен несуществующий ключ вопроса")
 
 
-def save_question_to_db(question, parent):
+def take_parent_for_pointer_key(pointer_key):
+    return parents_for_pointer_key.get(pointer_key, None)
+
+
+def take_sql_name_from_parent_of_pointer_key(pointer_key):
+    parent_key = take_parent_for_pointer_key(pointer_key)
+    return take_sql_name_from_pointer_key(parent_key)
+
+
+def save_question_to_db(question_key, parent_key):
     connection = db_connect()
     curs = connection.cursor()
     search_statement = f"""
         SELECT id FROM {questions_table_name}
         WHERE prompt = ? AND parent_prompt = ?
     """
+    question = take_sql_name_from_pointer_key(question_key)
+    parent = take_sql_name_from_pointer_key(parent_key)
     curs.execute(search_statement, [question, parent])
     data = curs.fetchall()
     if len(data) != 0:
@@ -159,7 +174,9 @@ def save_question_to_db(question, parent):
     connection.close()
 
 
-def update_question_usage(question, parent):
+def update_question_usage(question_key):
+    question = take_sql_name_from_pointer_key(question_key)
+    parent = take_sql_name_from_parent_of_pointer_key(question_key)
     connection = db_connect()
     curs = connection.cursor()
     search_statement = f"""
@@ -173,7 +190,12 @@ def update_question_usage(question, parent):
     connection.close()
 
 
+questions_for_pointer_keys = {}
+parents_for_pointer_key = {}
+sql_names_for_pointer_keys = {}
 answers_dict = {}
+
+
 chat_bot_start_point = generate_questions_tree_keyboard(
     ask_dictionary,
     ["0"],
@@ -185,7 +207,6 @@ print(answers_dict)
 
 @bot.message_handler(commands=['start'])
 def any_msg(message):
-    global chat_bot_start_point
     send_welcome_message(bot, message)
 
 
@@ -219,24 +240,17 @@ def send_invite_to_operator_message(bot, message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     sign_id = call.data
-    global answers_dict
     answer_data = answers_dict[sign_id]
 
-    prev_prompt = take_question_from_pointer_key(sign_id)
-    theme_text = prev_prompt
-    if theme_text == "0":
-        theme_text = get_chat_bot_start_text()
-    theme_text += ":"
+    theme_text = take_question_from_pointer_key(sign_id)
+    if theme_text[-1] != ":":
+        theme_text += ":"
 
     if isinstance(answer_data, tuple):
         answer_text = answer_data[0]
         answer_message = f"{theme_text}\n{answer_text}"
         keyboard = answer_data[1]
-
-        parent_prompt = call.message.text
-        if parent_prompt[-1] == ":":
-            parent_prompt = parent_prompt[:-1]
-        update_question_usage(prev_prompt, parent_prompt)
+        update_question_usage(sign_id)
 
         bot.edit_message_text(
             chat_id=call.message.chat.id,
