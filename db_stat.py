@@ -1,4 +1,5 @@
-import csv, datetime
+import csv
+import datetime
 from db_init import questions_table_name, db_connect
 
 
@@ -32,9 +33,14 @@ def main():
             quotechar='|',
             quoting=csv.QUOTE_MINIMAL
         )
-        spamwriter.writerow(['Вопрос', 'Тема', 'Запросы'])
+        headers = ['Вопрос-ID', 'Тема-ID', 'Запросы']
+        # печатаем колонки в консоли в обратном порядке
+        # для простоты отображения
+
+        print(",\t".join(reversed(headers)))
+        spamwriter.writerow(headers)
         for row in rows:
-            print(row)
+            print(",\t".join(str(item) for item in reversed(row)))
             spamwriter.writerow(row)
 
         print("=== Конец выгрузки; Благодарение Богу! ===")
