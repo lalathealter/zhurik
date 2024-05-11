@@ -92,8 +92,7 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
 
             answers_dict[pointer_key] = (value, end_keyboard)
             keyboard.add(answer_button)
-            parent_prompt = take_keyname_from_pointer_key(parent_chain[-1])
-            save_question_to_db(key, parent_prompt)
+            save_question_to_db(key, parent_chain[-1])
         else:
             raise Exception("Ошибка: не удалось прочитать древо вопросов (встречен неправильный тип данных)")
 
@@ -106,16 +105,37 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
     return keyboard
 
 
+questions_for_pointer_keys = {}
+sql_names_for_pointer_keys = {}
+
+
 def make_pointer_key(key, value):
-    return key + "-" + repr(id(value))
+    pointer_key = repr(id(key)) + "-" + repr(id(value))
+    ind = 0
+    indexed_question = key + "-" + str(ind)
+    continue_generate = True
+    while continue_generate:
+        indexed_question = key + "-" + str(ind)
+        ind += 1
+        value_already_there = questions_for_pointer_keys.get(indexed_question, False)
+        continue_generate = bool(value_already_there)
+
+    sql_names_for_pointer_keys[pointer_key] = indexed_question
+    questions_for_pointer_keys[pointer_key] = key
+    return pointer_key
 
 
-def take_value_from_pointer_key(pointer_key):
-    return pointer_key.split("-")[1]
+def take_question_from_pointer_key(pointer_key):
+    if pointer_key in questions_for_pointer_keys:
+        prompt = questions_for_pointer_keys[pointer_key]
+
+        return prompt
+    else:
+        raise Exception("Запрошен несуществующий ключ вопроса")
 
 
 def take_keyname_from_pointer_key(pointer_key):
-    return pointer_key.split("-")[0]
+    return pointer_key
 
 
 def save_question_to_db(question, parent):
@@ -202,7 +222,7 @@ def callback_inline(call):
     global answers_dict
     answer_data = answers_dict[sign_id]
 
-    prev_prompt = take_keyname_from_pointer_key(sign_id)
+    prev_prompt = take_question_from_pointer_key(sign_id)
     theme_text = prev_prompt
     if theme_text == "0":
         theme_text = get_chat_bot_start_text()
@@ -210,7 +230,7 @@ def callback_inline(call):
 
     if isinstance(answer_data, tuple):
         answer_text = answer_data[0]
-        answer_message = f"{theme_text} {answer_text}"
+        answer_message = f"{theme_text}\n{answer_text}"
         keyboard = answer_data[1]
 
         parent_prompt = call.message.text
