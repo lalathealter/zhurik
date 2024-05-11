@@ -1,5 +1,6 @@
 import csv
 import datetime
+from openpyxl import Workbook
 from db_init import questions_table_name, db_connect
 
 
@@ -23,11 +24,15 @@ def main():
     cursor.execute(get_statistics_statement)
     rows = cursor.fetchall()
 
-    filepath = f"./stats/{generate_statfile_name()}.csv"
+    filepath_without_ext = f"./stats/{generate_statfile_name()}"
+    filepath = f"{filepath_without_ext}.csv"
+
+    wb = Workbook()
+    excel_writer = wb.active
     with open(filepath, 'w', newline='') as csvfile:
         print("=== Выгрузка из базы данных по теме: Статистика заданных вопросов ===")
 
-        spamwriter = csv.writer(
+        csv_writer = csv.writer(
             csvfile,
             delimiter='|',
             quotechar='|',
@@ -38,12 +43,16 @@ def main():
         # для простоты отображения
 
         print(",\t".join(reversed(headers)))
-        spamwriter.writerow(headers)
+        csv_writer.writerow(headers)
+        excel_writer.append(headers)
         for row in rows:
             print(",\t".join(str(item) for item in reversed(row)))
-            spamwriter.writerow(row)
+            csv_writer.writerow(row)
+            excel_writer.append(row)
 
         print("=== Конец выгрузки; Благодарение Богу! ===")
+
+    wb.save(f'{filepath_without_ext}.xlsx')
 
     connection.close()
 
