@@ -24,10 +24,18 @@ ask_dictionary = parse_json_to_dict("./questions_tree.json")
 def form_invite_to_operator_button(name, tag):
     keyboard = types.InlineKeyboardMarkup()
     operator_text = f"{name}"
+    tag = format_tag(tag)
     operator_url = f"t.me/{tag}"
     invite_button = types.InlineKeyboardButton(operator_text, operator_url)
     keyboard.add(invite_button)
     return keyboard
+
+
+def format_tag(tag):
+    tag = tag.strip()
+    if tag[0] != "@":
+        tag = "@" + tag
+    return tag
 
 
 def generate_operators_pool(operators_dict):
