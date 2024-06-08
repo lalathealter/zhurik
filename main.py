@@ -92,7 +92,7 @@ def generate_questions_tree_keyboard(questions_tree, parent_chain, answers_dict)
                 text="Назад",
                 callback_data=parent_chain[-1]
             )
-            end_keyboard.add(start_button, back_button)
+            end_keyboard.add(back_button, start_button)
             answer_button = types.InlineKeyboardButton(
                 text=key,
                 callback_data=pointer_key
@@ -251,8 +251,6 @@ def callback_inline(call):
     answer_data = answers_dict[sign_id]
 
     theme_text = take_question_from_pointer_key(sign_id)
-    if theme_text[-1] != ":":
-        theme_text += ":"
 
     if isinstance(answer_data, tuple):
         answer_text = answer_data[0]
