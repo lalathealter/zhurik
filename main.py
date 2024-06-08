@@ -248,6 +248,9 @@ def send_invite_to_operator_message(bot, message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     sign_id = call.data
+    if sign_id not in answers_dict:
+        return
+
     answer_data = answers_dict[sign_id]
 
     theme_text = take_question_from_pointer_key(sign_id)
