@@ -8,7 +8,7 @@ from db_init import questions_table_name, db_connect
 load_dotenv()
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 
-bot = telebot.TeleBot(TG_BOT_TOKEN)
+bot = telebot.TeleBot(TG_BOT_TOKEN, parse_mode="MARKDOWN")
 
 
 def parse_json_to_dict(filename):
