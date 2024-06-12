@@ -257,7 +257,7 @@ def callback_inline(call):
 
     if isinstance(answer_data, tuple):
         answer_text = answer_data[0]
-        answer_message = f"{theme_text}\n{answer_text}"
+        answer_message = f"{theme_text}:\n{answer_text}"
         keyboard = answer_data[1]
         update_question_usage(sign_id)
 
