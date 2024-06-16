@@ -221,7 +221,7 @@ def any_msg(message):
 def send_welcome_message(bot, message):
     bot.send_message(
         message.chat.id,
-        "Привет!"
+        "Привет!\n\nЯ чат-бот факультета журналистики УрФУ, с радостью помогу вам узнать о поступлении в 2024 году!\n\n_Я ещё нахожусь на этапе разработки, поэтому если я вдруг перестану отвечать, перезапустите меня командой /start.\nЕсли это не поможет, свяжитесь с разработчиками_"
     )
     bot.send_message(
         message.chat.id,
@@ -231,7 +231,7 @@ def send_welcome_message(bot, message):
 
 
 def get_chat_bot_start_text():
-    return "Спроси меня о чём угодно:"
+    return "О чём бы вы хотели спросить?"
 
 
 @bot.message_handler(commands=['help'])
