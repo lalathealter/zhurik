@@ -257,7 +257,7 @@ def callback_inline(call):
 
     if isinstance(answer_data, tuple):
         answer_text = answer_data[0]
-        answer_message = f"{theme_text}:\n{answer_text}"
+        answer_message = f"{theme_text}\n{answer_text}"
         keyboard = answer_data[1]
         update_question_usage(sign_id)
 
@@ -274,6 +274,8 @@ def callback_inline(call):
             reply_markup=keyboard
         )
     else:
+        if not (theme_text.endswith("?") or theme_text.endswith(".") or theme_text.endswith("!")):
+            theme_text += ":"
         keyboard = answer_data
         bot.edit_message_text(
             chat_id=call.message.chat.id,
