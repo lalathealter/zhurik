@@ -121,13 +121,14 @@ def make_pointer_key(key, value, parent_key):
     while continue_generate:
         indexed_question = key + "-" + str(ind)
         ind += 1
-        value_already_there = questions_for_pointer_keys.get(indexed_question, False)
+        value_already_there = indexed_questions_dict.get(indexed_question, False)
         continue_generate = bool(value_already_there)
 
     sql_names_for_pointer_keys[pointer_key] = indexed_question
     if parent_key is not None:
         parents_for_pointer_key[pointer_key] = parent_key
     questions_for_pointer_keys[pointer_key] = key
+    indexed_questions_dict[indexed_question] = True
     return pointer_key
 
 
@@ -199,6 +200,7 @@ def update_question_usage(question_key):
 
 
 questions_for_pointer_keys = {}
+indexed_questions_dict = {}
 parents_for_pointer_key = {}
 sql_names_for_pointer_keys = {}
 answers_dict = {}
