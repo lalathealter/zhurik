@@ -4,6 +4,7 @@ from telebot import types
 import telebot
 import json
 from db_init import questions_table_name, db_connect
+import hashlib
 
 load_dotenv()
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
@@ -123,6 +124,9 @@ def make_pointer_key(key, value, parent_key):
         ind += 1
         value_already_there = indexed_questions_dict.get(indexed_question, False)
         continue_generate = bool(value_already_there)
+    h = hashlib.new('sha256')
+    pointer_key = h.update(indexed_question.encode())
+    pointer_key = h.hexdigest()
 
     sql_names_for_pointer_keys[pointer_key] = indexed_question
     if parent_key is not None:
@@ -179,6 +183,7 @@ def save_question_to_db(question_key, parent_key):
         VALUES (?, ?)
     """
     curs.execute(insert_statement, [question, parent])
+    d = curs.fetchall()
     connection.commit()
     connection.close()
 
